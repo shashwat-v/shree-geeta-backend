@@ -1,0 +1,119 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# C extensions
+*.so
+
+# Virtual environments
+env/
+venv/
+.venv/
+ENV/
+env.bak/
+venv.bak/
+
+# Pip / wheel / build output
+build/
+dist/
+*.egg-info/
+pip-wheel-metadata/
+
+# PyInstaller
+*.manifest
+*.spec
+
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Unit test / coverage reports
+htmlcov/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+.pytest_cache/
+
+# Type checkers / caches
+.mypy_cache/
+.dmypy.json
+.pyre/
+
+# IDEs and editors
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+*.iml
+.history/
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+ehthumbs.db
+
+# Environment / secret files
+.env
+.env.*
+.envrc
+*.env
+local_settings.py
+instance/
+
+# Secrets, keys, certs
+*.pem
+*.key
+*.crt
+*.p12
+id_rsa
+id_rsa.pub
+ssh-keys/
+credentials/
+secrets/
+*.gpg
+
+# Database files
+*.sqlite3
+*.db
+*.db-journal
+
+# Logs and runtime files
+*.log
+logs/
+*.pid
+*.seed
+*.pid.lock
+
+# Jupyter
+.ipynb_checkpoints
+
+# Static/media uploads
+media/
+uploads/
+staticfiles/
+
+# Docker (sensitive override files)
+docker-compose.override.yml
+.env.*.local
+
+# Node / frontend (if present)
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnp/
+.pnp.js
+
+# Misc
+*.cover
+*.prof
+coverage/
+*.log.*
+.idea/
+.vagrant/
