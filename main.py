@@ -5,7 +5,10 @@ from models import User
 from auth_utils import create_access_token, verify_password, hash_password, decode_access_token
 from pydantic import BaseModel
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from schemas import UserCreate, UserLogin, Token
+from schemas import UserCreate, UserLogin, Token, AskRequest
+from services.rag import answer_question
+from sse_starlette import EventSourceResponse
+from services.rag import answer_question, rag_chain
 
 Base.metadata.create_all(bind=engine)
 app = FastAPI()
@@ -40,3 +43,17 @@ def login_user(login_data: UserLogin, db: Session = Depends(get_db)):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid Credentials")
     access_token = create_access_token(data={"sub": user.username})
     return {"access_token": access_token, "token_type": "bearer", "user": user}
+
+@app.post("/ask")
+def ask_question(body: AskRequest):
+    result = answer_question(body.question)
+    return {"response": result}
+
+@app.post("/ask_stream")
+async def ask_stream(body: AskRequest):
+    question = body.question
+    def event_generator():
+        for chunk in rag_chain.stream(question):
+            if chunk.content:
+                yield {"data": chunk.content}
+    return EventSourceResponse(event_generator())

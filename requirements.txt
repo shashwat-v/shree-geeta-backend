@@ -5,3 +5,14 @@ passlib[bcrypt]
 bcrypt==4.0.1
 python-jwt
 python-jose[cryptography]
+langchain-pinecone
+python-dotenv
+langchain-core
+langchain
+langchain-ollama
+langchain-community
+langchain_groq
+langchain_huggingface
+sentence_transformers
+sse-starlette
+einops
