@@ -1,7 +1,7 @@
 from langchain_pinecone import PineconeVectorStore
 from langchain_core.vectorstores import VectorStoreRetriever
 from langchain_groq import ChatGroq
-from langchain_ollama import ChatOllama
+# from langchain_ollama import ChatOllama
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.runnables import RunnablePassthrough, RunnableParallel
 from langchain_huggingface import HuggingFaceEmbeddings
@@ -11,6 +11,9 @@ import os
 import json
 
 load_dotenv()
+os.environ["LANGCHAIN_TRACING_V2"] = "true"
+os.environ["LANGCHAIN_API_KEY"] = os.getenv("LANGCHAIN_API_KEY")
+os.environ["LANGCHAIN_PROJECT"] = "shree-geeta-ai"
 pinecone_api_key = os.getenv("PINECONE_API_KEY")
 groq_api_key = os.getenv("GROQ_API_KEY")
 
@@ -31,15 +34,15 @@ vectorstore = PineconeVectorStore(
 
 retriever = VectorStoreRetriever(vectorstore=vectorstore, search_kwargs={"k":3})
 
-# llm = ChatGroq(
-#     model="mixtral-8x7b-32768",
-#     api_key=groq_api_key,
-#     streaming=True
-# )
-
-llm = ChatOllama(
-    model="mistral",
+llm = ChatGroq(
+    model="mixtral-8x7b-32768",
+    api_key=groq_api_key,
+    streaming=True
 )
+
+# llm = ChatOllama(
+#     model="mistral",
+# )
 
 template = """
 You are Shree Geeta AI.
