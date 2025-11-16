@@ -28,9 +28,9 @@ RUN pip install --no-cache-dir --upgrade pip && \
 COPY . .
 
 # Create non-root user for security
-RUN useradd --create-home --shell /bin/bash app
-RUN chown -R app:app /app
-USER app
+# RUN useradd --create-home --shell /bin/bash app
+# RUN chown -R app:app /app
+# USER app
 
 # Expose port
 EXPOSE 8000

@@ -17,3 +17,5 @@ langchain_openai
 sentence_transformers
 sse-starlette
 einops
+psycopg2-binary
+tenacity
