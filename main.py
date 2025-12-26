@@ -18,16 +18,30 @@ from sse_starlette import EventSourceResponse
 import logging
 from datetime import datetime
 import asyncio
+import os
+
+LOG_DIR = "/app/logs"
+os.makedirs(LOG_DIR, exist_ok=True)
 
 logging.basicConfig(
     level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
     handlers=[
-        logging.FileHandler('app.log'),
-        logging.StreamHandler()
-    ]
+        logging.FileHandler(os.path.join(LOG_DIR, "app.log")),
+        logging.StreamHandler(),
+    ],
 )
 logger = logging.getLogger(__name__)
+
+# logging.basicConfig(
+#     level=logging.INFO,
+#     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+#     handlers=[
+#         logging.FileHandler('app.log'),
+#         logging.StreamHandler()
+#     ]
+# )
+# logger = logging.getLogger(__name__)
 
 try:
     Base.metadata.create_all(bind=engine)

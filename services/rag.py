@@ -31,16 +31,23 @@ console_formatter = logging.Formatter(
     '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 console_handler.setFormatter(console_formatter)
-
-file_handler = logging.FileHandler('rag_service.log')
-file_handler.setLevel(logging.DEBUG)
-file_formatter = logging.Formatter(
-    '%(asctime)s - %(name)s - %(levelname)s - %(funcName)s:%(lineno)d - %(message)s'
-)
-file_handler.setFormatter(file_formatter)
-
 logger.addHandler(console_handler)
-logger.addHandler(file_handler)
+
+# Try to add file handler, but don't fail if we can't write to disk
+try:
+    log_dir = os.path.join(os.path.dirname(__file__), '..', 'logs')
+    os.makedirs(log_dir, exist_ok=True)
+    log_file = os.path.join(log_dir, 'rag_service.log')
+    
+    file_handler = logging.FileHandler(log_file)
+    file_handler.setLevel(logging.DEBUG)
+    file_formatter = logging.Formatter(
+        '%(asctime)s - %(name)s - %(levelname)s - %(funcName)s:%(lineno)d - %(message)s'
+    )
+    file_handler.setFormatter(file_formatter)
+    logger.addHandler(file_handler)
+except (PermissionError, OSError) as e:
+    logger.warning(f"Could not create log file: {e}. Logging to console only.")
 
 class Config:
     LANGCHAIN_TRACING_V2: str = os.getenv("LANGCHAIN_TRACING_V2", "false")
@@ -214,45 +221,116 @@ class RAGService:
             logger.error(f"Failed to initialize RAG components: {e}", exc_info=True)
             raise RAGException(f"RAG initialization failed: {str(e)}")
     
+    def _fix_encoding(self, text: str) -> str:
+        """Fix common encoding issues in retrieved text"""
+        # Common mojibake replacements
+        replacements = {
+            'â¢': '•',
+            'â': '"',
+            'â': '"',
+            'â': "'",
+            'â': '—',
+            'â': '–',
+            'Ã©': 'é',
+            'Ã¨': 'è',
+            'Ã ': 'à',
+            'â¬': '€',
+            'Â': '',
+        }
+        
+        for wrong, right in replacements.items():
+            text = text.replace(wrong, right)
+        
+        # Try to detect and fix latin-1 to utf-8 issues
+        try:
+            if any(ord(c) > 127 for c in text):
+                # Attempt to encode as latin-1 and decode as utf-8
+                try:
+                    text = text.encode('latin-1').decode('utf-8')
+                except (UnicodeDecodeError, UnicodeEncodeError):
+                    pass
+        except Exception:
+            pass
+        
+        return text
+
     def _create_prompt_template(self) -> ChatPromptTemplate:
-        template = """You are Shree Geeta AI, a knowledgeable guide on the Bhagavad Gita.
+        template = """You are **Shree Geeta AI**, a friendly spiritual guide who speaks warmly and naturally.
 
-Use the provided context from the Bhagavad Gita to answer the question accurately and meaningfully.
+You answer according to the *type* of user message:
 
-Respond in plain text format. DO NOT return JSON. DO NOT use curly braces or code blocks.
+==========================
+### 1) IF USER ASKS A CASUAL / PERSONAL QUESTION
+Examples: "hi", "how are you?", "what can you do?", "who are you?", "tell me something", "i'm sad"
 
-Format your response EXACTLY like this:
+👉 Respond in a friendly, conversational tone.
+👉 DO NOT force Gita verses.
+👉 Keep it short, warm and human-like.
 
-• Summary meaning: <1-2 line concise summary>
+Example:
+"Hello dear one 🙏 I am here with you. How can I support you today?"
 
-• Relevant Verses:
-  - Chapter X Verse Y: <one line essence of the verse>
-  - Chapter X Verse Y: <one line essence of the verse>
-  (include 2-3 most relevant verses only)
+==========================
+### 2) IF USER ASKS A QUESTION RELATED TO LIFE, PROBLEMS, OR ADVICE
+Examples: "I'm stressed", "How do I stay calm?", "How to handle failure?"
 
-• Explanation for modern practical life:
-<5-10 lines of practical, relatable explanation with real-world examples from today's life. Make it actionable and inspiring.>
+👉 Give a natural, supportive reply first.
+👉 Then optionally connect to Gita wisdom.
+👉 Keep it less formal but well-structured.
 
-CONTEXT FROM BHAGAVAD GITA:
+==========================
+### 3) IF USER ASKS ABOUT BHAGAVAD GITA, PHILOSOPHY, MEANING, VERSES
+
+Use this structured format with proper spacing:
+
+**Summary Meaning:**
+<1-2 clear lines>
+
+**Relevant Verses:**
+• Chapter X Verse Y: <essence in one line>
+• Chapter X Verse Y: <essence in one line>
+
+**Explanation for Modern Life:**
+<5-10 lines explaining practical application>
+
+==========================
+### CRITICAL FORMATTING RULES:
+1. ALWAYS add blank lines between sections
+2. Use proper paragraph breaks (double newline)
+3. Add spacing after bullets and headers
+4. Keep verse citations clean and readable
+5. Never run text together without breaks
+
+### IMPORTANT:
+- The retrieved context may have encoding issues - fix them automatically
+- Use the retrieved context ONLY when relevant
+- If the question is conversational, ignore the retrieved context
+- Never output raw JSON or special symbols
+- Format your response for maximum readability
+
+CONTEXT FROM VECTOR DATABASE:
 {context}
 
 USER QUESTION:
 {question}
 
-Remember: Keep it practical, inspirational, and easy to understand. Connect ancient wisdom to modern life.
-"""
+Your well-formatted response:"""
         return ChatPromptTemplate.from_template(template)
+
     
     def _format_docs(self, docs: List[Document]) -> str:
+        """Format documents with encoding fixes"""
         if not docs:
             logger.warning("No documents retrieved from vector store")
             return "No relevant context found."
         
-        formatted = "\n\n".join([
-            f"[Source {i+1}]\n{doc.page_content}"
-            for i, doc in enumerate(docs)
-        ])
+        formatted_parts = []
+        for i, doc in enumerate(docs):
+            # Fix encoding issues in the content
+            clean_content = self._fix_encoding(doc.page_content)
+            formatted_parts.append(f"[Source {i+1}]\n{clean_content}")
         
+        formatted = "\n\n".join(formatted_parts)
         logger.debug(f"Formatted {len(docs)} documents for context")
         return formatted
     
@@ -366,7 +444,7 @@ Remember: Keep it practical, inspirational, and easy to understand. Connect anci
             
             results = [
                 {
-                    "content": doc.page_content,
+                    "content": self._fix_encoding(doc.page_content),
                     "metadata": doc.metadata,
                     "score": None
                 }
